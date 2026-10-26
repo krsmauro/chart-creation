@@ -6,20 +6,16 @@ import sys
 from collections import Counter
 from datetime import date, timedelta
 
-from chart_fill import dates, shading
-from chart_fill.settings import GAP
+from chart_fill import dates
 
 COLORS = [236, 22, 28, 34, 40]  # 256-color terminal codes close to GitHub's dark theme
 
 
-def describe_fit(tape: list[str]) -> str:
-    period = len(tape[0])
-    width = period - GAP
-    if width + period <= dates.CHART_WEEKS:
-        fits = "one full copy is always in view"
-    else:
-        fits = "it won't always be fully in view; shorten the text or lower GAP"
-    return f"The text is {width} weeks wide and repeats every {period} weeks, so {fits}."
+def level_of(count: int, busiest: int) -> int:
+    """Shade GitHub gives a day, 0 (empty) to 4 (brightest). It splits 0..your busiest
+    day into four equal bands; worked out from your own chart, where with a busiest
+    day of 13, days with 1-3 contributions got shade 1, 4-6 shade 2, 7-9 shade 3."""
+    return -(-4 * count // busiest)  # ceil(4 * count / busiest)
 
 
 def show(counts: Counter[date], today: date) -> None:
@@ -41,6 +37,6 @@ def show(counts: Counter[date], today: date) -> None:
         line = []
         for week in range(weeks):
             day = start + timedelta(weeks=week, days=row)
-            line.append(cell(shading.level_of(counts[day], busiest)) if day <= today else "  ")
+            line.append(cell(level_of(counts[day], busiest)) if day <= today else "  ")
         print(f"{name:<4}" + "".join(line))
     print(f"\n{' ' * (4 + 2 * weeks - 20)}Less {''.join(cell(level) for level in range(5))}More")

@@ -3,7 +3,6 @@
     settings  what to draw (the part you edit)
     font      text -> rows of pixels
     dates     calendar math for the chart grid
-    shading   how GitHub turns commit counts into shades
     design    which day gets how many commits
     repo      everything that touches git
     github    your real contributions, through the gh CLI

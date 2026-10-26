@@ -1,40 +1,25 @@
-"""Where the text goes on the timeline, and how many commits each day needs."""
+"""Where the text goes on the chart, and how many commits each square gets."""
 
 from __future__ import annotations
 
-import random
-from collections import Counter
-from datetime import date
+from datetime import date, timedelta
 
-from chart_fill import dates, font, shading
-from chart_fill.settings import ANCHOR, GAP
-
-STYLES = ("solid", "random")
-SEED = "chart-fill"  # only used by the "random" style
+from chart_fill import ChartError, dates, font
+from chart_fill.repo import PUSH_LIMIT
 
 
-def build_tape(text: str) -> list[str]:
-    """One repeat of the drawing as 7 rows (Sunday..Saturday), one column per
-    week: the letters on Monday..Friday, then GAP empty columns."""
-    rows = [row + "." * GAP for row in font.render(text)]
-    blank = "." * len(rows[0])
-    return [blank, *rows, blank]
-
-
-def level_for(day: date, tape: list[str], style: str) -> int:
-    """Shade of this day's square, 0 (empty) to 4 (brightest)."""
-    week = (day - ANCHOR).days // 7  # weeks since ANCHOR; the tape repeats both ways
-    if tape[dates.row_of(day)][week % len(tape[0])] != "#":
-        return 0
-    # Predictable on purpose: seeded per day, so --dry-run shows exactly what a real run makes.
-    return random.Random(f"{SEED}:{day}").randint(2, 4) if style == "random" else 4  # NOSONAR
-
-
-def plan(tape: list[str], style: str, since: date, today: date, drawn: Counter[date]) -> dict[date, int]:
-    """Commits to make per day: lit squares that don't have generated commits yet."""
-    planned = {}
-    for day in dates.days(since, today):
-        n = shading.commits_for(level_for(day, tape, style))
-        if n and not drawn[day]:
-            planned[day] = n
-    return planned
+def plan(text: str, today: date) -> dict[date, int]:
+    """Commits to make per day. The text ends in last week's column, so it stays
+    on the chart as long as possible, and every lit square gets the same number
+    of commits: as many as fit in one push."""
+    rows = font.render(text)
+    width = len(rows[0])
+    last_week = dates.sunday_of(today) - timedelta(weeks=1)
+    first_week = last_week - timedelta(weeks=width - 1)
+    if first_week <= dates.chart_start(today):  # the chart's first column can be cut off
+        raise ChartError(f"{text!r} is {width} weeks wide, but only {dates.CHART_WEEKS - 2} fit. Shorten TEXT.")
+    lit = sorted(first_week + timedelta(weeks=col, days=row + 1)  # row 0 is Monday
+                 for row, line in enumerate(rows) for col, pixel in enumerate(line) if pixel == "#")
+    if not lit:
+        raise ChartError("TEXT has nothing to draw.")
+    return dict.fromkeys(lit, PUSH_LIMIT // len(lit))
