@@ -1,3 +1,3 @@
 """What to draw. Preview with ./chart.py --dry-run, then draw with ./chart.py."""
 
-TEXT = "ᗧ • MAURO"
+TEXT = "ᗣ ᗧ • MAURO"
